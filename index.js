@@ -6,7 +6,6 @@ const assert = require('assert')
 const _ = require('lodash')
 const session = require('express-session');
 const passport = require('passport');
-const OidcStrategy = require('passport-openidconnect').Strategy;
 const yaml = require('yaml')
 const Promise = require('bluebird')
 const SQLiteStore = require('connect-sqlite3')(session)
@@ -43,7 +42,7 @@ passport.serializeUser((user, next) => {
 });
 
 passport.deserializeUser((obj, next) => {
-    obj.username = obj._json.preferred_username.split('@')[0];
+    obj.username = obj.preferred_username.split('@')[0];
     next(null, obj);
 });
 
