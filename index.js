@@ -324,7 +324,8 @@ app.get('/api/departmentGroups', ensureLoggedIn, async (req, res) => {
     const user = req.user;
     const ldapRes = await ldapSearch({ filter: `(&(objectClass=person)(sAMAccountName=${user.username}))`, scope: 'sub', attributes: ['edupersonorgunitdn'] });
     const isDepartmentMember = ldapRes[0].eduPersonOrgUnitDN.indexOf(config.DEPARTMENT_MEMBERS_DN) >= 0;
-    if (isDepartmentMember) {
+    const isAdmin = ADMIN_USERNAMES.indexOf(user.username) >= 0;
+    if (isDepartmentMember || isAdmin) {
         return res.send(Object.values(GROUPS))
     } else {
         res.status(403).send("Forbidden from non-department members.");
