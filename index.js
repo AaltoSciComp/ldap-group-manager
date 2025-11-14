@@ -262,6 +262,15 @@ app.get('/api/groupChanges', ensureLoggedIn, async (req, res) => {
     return res.send(events);
 })
 
+app.get('/api/groupUserChanges', ensureLoggedIn, async (req, res) => {
+    const groupName = req.query.groupName;
+    const username = req.query.username;
+    const groupNames = getUserManagedGroupNames(req.user);
+    if (groupNames.indexOf(groupName) === -1) { return res.status(403).send("Forbidden") }
+    const events = await GroupModifyEvent.find({ group: groupName, targetPerson: username }).sort({timestamp: -1}).exec();
+    return res.send(events);
+})
+
 async function modifyGroup(req, res, opType) {
     const groupName = req.body.groupName;
     const user = req.body.user;

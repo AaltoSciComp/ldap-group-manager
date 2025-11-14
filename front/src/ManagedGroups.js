@@ -143,6 +143,16 @@ class ManagedGroups extends Component {
     })
   }
 
+  getGroupUserChangeHistory = async (ev, group, username) => {
+    ev.stopPropagation();
+    const res = await fetch(`/api/groupUserChanges?groupName=${group.cn}&username=${username}`)
+    const data = await res.json()
+    this.setState({
+      changeGroup: group,
+      groupChanges: data
+    })
+  }
+
   onGroupSearchChange = (e) => {
     clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
@@ -166,6 +176,7 @@ class ManagedGroups extends Component {
         group={g}
         addMemberToGroup={this.addMemberToGroup}
         getGroupChangeHistory={this.getGroupChangeHistory}
+        getGroupUserChangeHistory={this.getGroupUserChangeHistory}
         removeMemberFromGroup={this.removeMemberFromGroup}
       />
     )

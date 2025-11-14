@@ -35,7 +35,7 @@ class GroupTableBlock extends Component {
   }
 
   render() {
-    const { group, removeMemberFromGroup } = { ...this.props }
+    const { group, removeMemberFromGroup, getGroupUserChangeHistory } = { ...this.props }
     const { tooltipShown, tooltipText } = { ...this.state }
     return (
       <>
@@ -58,7 +58,7 @@ class GroupTableBlock extends Component {
             </Tooltip>
           </Overlay>
         </div>
-        <GroupTable key={group.cn} group={group} removeMemberFromGroup={removeMemberFromGroup}></GroupTable>
+        <GroupTable key={group.cn} group={group} removeMemberFromGroup={removeMemberFromGroup} getGroupUserChangeHistory={getGroupUserChangeHistory}></GroupTable>
       </>
     )
   }
