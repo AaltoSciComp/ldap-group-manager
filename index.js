@@ -352,6 +352,31 @@ app.post('/api/addGroupMember', ensureLoggedIn, (req, res) => modifyGroup(req, r
 
 app.delete('/api/deleteGroupMember', ensureLoggedIn, (req, res) => modifyGroup(req, res, 'delete'));
 
+app.post('/api/editExpiry', ensureLoggedIn, async (req, res) => {
+    const groupName = req.body.groupName;
+    const username = req.body.username;
+    const expiryDate = req.body.expiryDate;
+    const groupNames = getUserManagedGroupNames(req.user);
+    if (groupNames.indexOf(groupName) === -1) { return res.status(403).send("Forbidden") }
+    await GroupMembershipExpiry.findOneAndUpdate(
+        { group: groupName, targetPerson: username },
+        { expiryDate: new Date(expiryDate) },
+        { upsert: true }
+    );
+    res.sendStatus(200);
+})
+
+app.delete('/api/editExpiry', ensureLoggedIn, async (req, res) => {
+    const groupName = req.body.groupName;
+    const username = req.body.username;
+    const groupNames = getUserManagedGroupNames(req.user);
+    if (groupNames.indexOf(groupName) === -1) { return res.status(403).send("Forbidden") }
+    await GroupMembershipExpiry.deleteMany(
+        { group: groupName, targetPerson: username }
+    );
+    res.sendStatus(200);
+})
+
 app.get('/api/dataSources', ensureLoggedIn, (req, res) => res.send(DATA_SOURCES));
 
 app.get('/api/ownGroups', ensureLoggedIn, async (req, res) => {

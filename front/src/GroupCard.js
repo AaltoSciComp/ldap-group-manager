@@ -50,7 +50,7 @@ class GroupCard extends Component {
   }
 
   render() {    
-    const { group, removeMemberFromGroup, getGroupUserChangeHistory } = { ...this.props }
+    const { group, editExpiry, removeMemberFromGroup, getGroupUserChangeHistory } = { ...this.props }
     const ds = this.context.dataSources[group.dataSource];
     return (
       <Card id={`${group.dn}-card`}>
@@ -106,7 +106,7 @@ class GroupCard extends Component {
         <Accordion.Collapse eventKey={group.dn}>
           <Card.Body>
             <GroupInfoTable group={group}/>
-            <GroupTableBlock getGroupUserChangeHistory={getGroupUserChangeHistory} removeMemberFromGroup={removeMemberFromGroup} group={group}/>
+            <GroupTableBlock editExpiry={editExpiry} getGroupUserChangeHistory={getGroupUserChangeHistory} removeMemberFromGroup={removeMemberFromGroup} group={group}/>
           </Card.Body>
         </Accordion.Collapse>
       </Card>

@@ -14,7 +14,16 @@ class ManagedGroups extends Component {
     this.config = this.props.config;
     this.makeGroupCard = this.makeGroupCard.bind(this);
     this.searchInput = React.createRef();
-    this.state = { loading: true, groups: [], shownGroups: [], memberToRemove: undefined, removalGroup: undefined, groupSearchText: "" }
+    this.state = {
+      loading: true,
+      groups: [],
+      shownGroups: [],
+      memberToRemove: undefined,
+      removalGroup: undefined,
+      groupSearchText: "",
+      editExpiryGroup: undefined,
+      editExpiryMember: undefined,
+    }
   }
 
   async componentDidMount() {
@@ -157,6 +166,50 @@ class ManagedGroups extends Component {
     })
   }
 
+  editExpiry = async (ev, group, username, expiryDate) => {
+    ev.stopPropagation();
+    if (expiryDate) {
+      const res = await fetch('/api/editExpiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupName: group.cn,
+          username: username,
+          expiryDate: expiryDate
+        })
+      });
+      if (res.status !== 200) {
+        console.log(res);
+        console.log("Failed to edit expiry", await res.json());
+        return;
+      }
+      const groups = [...this.state.groups];
+      const gIdx = _.findIndex(groups, { cn: group.cn });
+      group.expiries[username] = { expiryDate: expiryDate, targetPerson: username, group: group.cn }
+      groups.splice(gIdx, 1, group);
+      this.setState({groups: groups, shownGroups: this.getShownGroups(groups)});
+    } else {
+      const res = await fetch('/api/editExpiry', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupName: group.cn,
+          username: username
+        })
+      });
+      if (res.status !== 200) {
+        console.log(res);
+        console.log("Failed to clear expiry", await res.json());
+        return;
+      }
+      const groups = [...this.state.groups];
+      const gIdx = _.findIndex(groups, { cn: group.cn });
+      delete group.expiries[username];
+      groups.splice(gIdx, 1, group);
+      this.setState({groups: groups, shownGroups: this.getShownGroups(groups)});
+    }
+  }
+
   onGroupSearchChange = (e) => {
     clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
@@ -178,6 +231,7 @@ class ManagedGroups extends Component {
       <GroupCard
         key={g.dn}
         group={g}
+        editExpiry={this.editExpiry}
         addMemberToGroup={this.addMemberToGroup}
         getGroupChangeHistory={this.getGroupChangeHistory}
         getGroupUserChangeHistory={this.getGroupUserChangeHistory}
