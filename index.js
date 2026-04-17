@@ -13,6 +13,7 @@ const SQLiteStore = require('connect-sqlite3')(session)
 const config = require('./config')
 
 const GroupModifyEvent = require('./models/GroupModifyEvent')
+const GroupMembershipExpiry = require('./models/GroupMembershipExpiry')
 
 const app = express()
 app.use(bodyParser.json());
@@ -93,8 +94,15 @@ async function ldapSearch(opts) {
             }
             const foundEntries = [];
             result.on('searchEntry', function(entry) {
-                const resObj = entry.object
-                foundEntries.push(resObj)
+                const obj = {
+                    dn: entry.dn && entry.dn.toString ? entry.dn.toString() : String(entry.dn),
+                    ...Object.fromEntries(
+                        entry.attributes.map(attr => {
+                            const value = attr.values.length === 1 ? attr.values[0] : attr.values;
+                            return [attr.type, value];
+                        })
+                )};
+                foundEntries.push(obj);
             });
             result.on('error', err => {
                 client.destroy();
@@ -193,7 +201,9 @@ function ensureLoggedIn(req, res, next) {
 }
 
 
-app.use('/login', passport.authenticate(config.PASSPORT_STRATEGY_NAME));
+app.use('/login', (req, res, next) => {
+  passport.authenticate(config.PASSPORT_STRATEGY_NAME)(req, res, next)
+});
 
 app.use('/auth/callback',
     passport.authenticate(config.PASSPORT_STRATEGY_NAME, { failureRedirect: '/error' }),
@@ -207,6 +217,15 @@ app.get('/api/managedGroups', ensureLoggedIn, async (req, res) => {
     const groupNames = _.keys(groups);
     if (groupNames.length > 0) {
         const ldapGroups = await searchGroups(groupNames);
+
+        // Check groups for expiry info and merge it in
+        const expiries = await GroupMembershipExpiry.find({ group: { $in: groupNames } }).exec();
+        _.forEach(ldapGroups, g => {
+            g.expiries = _.keyBy(
+                _.filter(expiries, { group: g.sAMAccountName }),
+                'targetPerson'
+            )
+        })
 
         // Search for users from groups
         let usernames = [];
@@ -251,7 +270,7 @@ app.get('/api/findUsers', ensureLoggedIn, async (req, res) => {
     }
 
     const users = await ldapSearch({ filter: search, scope: 'sub', attributes: ['displayName', 'sAMAccountName', 'mail'] });
-    res.send(users);
+    res.json(users);
 })
 
 app.get('/api/groupChanges', ensureLoggedIn, async (req, res) => {
@@ -271,6 +290,13 @@ app.get('/api/groupUserChanges', ensureLoggedIn, async (req, res) => {
     return res.send(events);
 })
 
+function decodeLdapHexEscapes(dn) {
+  // Turns sequences like \c3\a5 into UTF‑8 characters
+  return dn.replace(/((?:\\[0-9A-Fa-f]{2})+)/g, (seq) =>
+    Buffer.from(seq.replace(/\\/g, ''), 'hex').toString('utf8')
+  );
+}
+
 async function modifyGroup(req, res, opType) {
     const groupName = req.body.groupName;
     const user = req.body.user;
@@ -280,26 +306,38 @@ async function modifyGroup(req, res, opType) {
     if (groups.length !== 1) { res.status(400).send(`Found ${groups.length} groups instead of one`) }
     const group = groups[0];
     const change1 = new ldap.Change({
-        operation: opType,
-        modification: {
-            member: [user.dn]
-        }
+        operation: opType, // 'add' or 'delete'
+        modification: new ldap.Attribute({
+            type: 'member',
+            values: [decodeLdapHexEscapes(user.dn)],
+        }),
     });
     const change2 = new ldap.Change({
         operation: opType,
-        modification: {
-            memberUid: [user.sAMAccountName]
-        }
+        modification: new ldap.Attribute({
+            type: 'memberUid',
+            values: [user.sAMAccountName],
+        }),
     });
     try {
         modifyRes = await ldapModify(group.dn, [change1, change2])
-        GroupModifyEvent.create({
+        await GroupModifyEvent.create({
             operation: opType,
             targetPerson: user.sAMAccountName,
             changedBy: req.user.username,
             group: req.body.groupName,
             comments: req.body.comments
         });
+        if (opType === 'delete') {
+            await GroupMembershipExpiry.deleteMany({ targetPerson: user.sAMAccountName, group: req.body.groupName });
+        }
+        if (opType === 'add' && req.body.expiryDate) {
+            await GroupMembershipExpiry.create({
+                expiryDate: new Date(req.body.expiryDate),
+                targetPerson: user.sAMAccountName,
+                group: req.body.groupName
+            });
+        }
         res.send(modifyRes);
     } catch (err) {
         res.status(400).send({

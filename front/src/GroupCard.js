@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Button, Card, Accordion, Badge, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import GroupTableBlock from './GroupTableBlock'
 import GroupInfoTable from './GroupInfoTable'
-import { BsChevronDown, BsBook } from 'react-icons/bs';
+import { BsChevronDown, BsBook, BsAlertCircle } from 'react-icons/bs';
 import { MdPersonAdd } from 'react-icons/md';
 import ConfigContext from './ConfigContext'
 
@@ -53,10 +53,20 @@ class GroupCard extends Component {
     const { group, removeMemberFromGroup, getGroupUserChangeHistory } = { ...this.props }
     const ds = this.context.dataSources[group.dataSource];
     return (
-      <Card>
+      <Card id={`${group.dn}-card`}>
         <Accordion.Toggle style={{display: "flex", flexDirection: "row", justifyContent: "center"}} as={Card.Header} eventKey={group.dn}>
           <span style={{fontSize: "1.2rem", fontWeight: "500"}}>
             { group.cn }
+            <OverlayTrigger
+              placement='top'
+              overlay={
+                <Tooltip>
+                  This group has expired members
+                </Tooltip>
+              }
+            >
+              <span>{Object.values(group.expiries).some(expiry => new Date(expiry.expiryDate) < new Date()) ? <BsAlertCircle style={{color: "red"}}/> : null}</span>
+            </OverlayTrigger>
           </span>
 
           

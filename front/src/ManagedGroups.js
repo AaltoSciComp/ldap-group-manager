@@ -88,13 +88,14 @@ class ManagedGroups extends Component {
     });
   }
 
-  onAddModalConfirm = async (user, comments) => {
+  onAddModalConfirm = async (user, comments, expiryDate) => {
     const res = await fetch('/api/addGroupMember', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user: user,
         comments: comments,
+        expiryDate: expiryDate,
         groupName: this.state.addGroup.cn
       })
     });
@@ -117,6 +118,9 @@ class ManagedGroups extends Component {
     const g = this.state.addGroup;
     const gIdx = _.findIndex(groups, { cn: g.cn });
     g.members.push(user);
+    if (expiryDate) {
+      g.expiries[user.sAMAccountName] = { expiryDate: expiryDate, targetPerson: user.sAMAccountName, group: g.cn }
+    }
     groups.splice(gIdx, 1, g);
     this.setState({
       groups: groups,
@@ -182,6 +186,30 @@ class ManagedGroups extends Component {
     )
   }
 
+  makeExpiredMemberGroupsSection() {
+    const groupsWithExpiredMembers = _.filter(this.state.groups, g => {
+      return _.some(g.expiries, e => e.expiryDate && new Date(e.expiryDate) < new Date())
+    })
+    if (groupsWithExpiredMembers.length === 0) {
+      return <div></div>;
+    }
+    return (
+      <Col style={{marginBottom: "15px"}}>
+        <h6>The following groups you manage have expired members:</h6>
+        {
+          _.map(groupsWithExpiredMembers, g => {
+            return (
+              <div key={g.dn}>
+                <a href={`#${g.dn}-card`}>{g.cn}</a><br />
+              </div>
+            )
+          })
+        }
+      </Col>
+    )
+  }
+
+
   render() {
     return (
       <>
@@ -197,6 +225,9 @@ class ManagedGroups extends Component {
           </InputGroup>
 
         </Col>
+      </Row>
+      <Row>
+        {this.makeExpiredMemberGroupsSection()}
       </Row>
       <Accordion>
         {

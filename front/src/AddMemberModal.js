@@ -13,6 +13,7 @@ class AddMemberModal extends Component {
     this.firstnameInput = React.createRef();
     this.surnameInput = React.createRef();
     this.commentsInput = React.createRef();
+    this.expiryDateInput = React.createRef();
     this.state = {  }
   }
 
@@ -24,12 +25,12 @@ class AddMemberModal extends Component {
     this.props.onDismiss();
   }
 
-  onConfirm = (user, comments) => {
+  onConfirm = (user, comments, expiryDate) => {
     this.setState({
       user: undefined,
       users: undefined
     });
-    this.props.onConfirm(user, comments)
+    this.props.onConfirm(user, comments, expiryDate)
   }
 
   searchBy = (type) => {
@@ -118,6 +119,9 @@ class AddMemberModal extends Component {
                 <div>
                   Add {u.displayName} to the group?
                   <FormControl id="commentsInput" ref={this.commentsInput} placeholder="Comments" />
+                  <br />
+                  <h6>End date (optional, not automatic)</h6>
+                  <FormControl type="date" id="expiryDateInput" ref={this.expiryDateInput} />
                 </div>
               ) : ""
             }
@@ -129,7 +133,7 @@ class AddMemberModal extends Component {
         </Modal.Body>
         <Modal.Footer>
           <Button value="1" onClick={this.onDismiss} variant="outline-secondary">Cancel</Button>
-          <Button value="0" disabled={!u || !u.sAMAccountName} onClick={() => this.onConfirm(u, this.commentsInput.current.value)} variant="primary">Add</Button>
+          <Button value="0" disabled={!u || !u.sAMAccountName} onClick={() => this.onConfirm(u, this.commentsInput.current.value, this.expiryDateInput.current.value)} variant="primary">Add</Button>
         </Modal.Footer>
       </Modal>
     )

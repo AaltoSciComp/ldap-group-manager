@@ -12,6 +12,7 @@ class GroupTable extends Component {
           <th>Display name</th>
           <th>Username</th>
           <th>Email address</th>
+          <th>Expiry</th>
           <th>History</th>
           <th></th>
         </tr>
@@ -41,6 +42,14 @@ class GroupMemberLine extends Component {
     return this.props.getGroupUserChangeHistory(ev, this.props.g, this.props.m.sAMAccountName)
   }
 
+  makeExpiryCellSpan() {
+    const expiry = this.props.g.expiries[this.props.m.sAMAccountName];
+    if (expiry && new Date(expiry.expiryDate) < new Date()) {
+      return <span style={{color: "red"}}>{new Date(expiry.expiryDate).toLocaleDateString()}</span>
+    }
+    return expiry ? new Date(expiry.expiryDate).toLocaleDateString() : '';
+  }
+
   render() {
     const { m } = this.props;
     return (
@@ -48,6 +57,7 @@ class GroupMemberLine extends Component {
         <td>{m.displayName}</td>
         <td>{m.sAMAccountName}</td>
         <td>{m.mail}</td>
+        <td>{this.makeExpiryCellSpan()}</td>
         <td>
             <Button style={{width: "55px"}} onClick={this.getGroupUserChangeHistory} size="sm" variant="outline-secondary">?</Button>
         </td>
