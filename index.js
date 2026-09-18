@@ -169,8 +169,11 @@ function parseGroupSearchResults(groups) {
         if (!g.memberUid) { g.memberUid = [] }
         // Map member usernames to the user objects
         g.members = g.memberUid.map(u => {
+            if (!USER_CACHE[u]) {
+                console.log("No user found for memberUid " + u + "!");
+            }
             return USER_CACHE[u];
-        });
+        }).filter(o => o);
         delete g.memberUid;
         return g
     })
