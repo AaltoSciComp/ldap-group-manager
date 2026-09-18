@@ -170,7 +170,7 @@ function parseGroupSearchResults(groups) {
         // Map member usernames to the user objects
         g.members = g.memberUid.map(u => {
             if (!USER_CACHE[u]) {
-                console.log("No user found for memberUid " + u + "!");
+                console.log(`No user found for memberUid ${u} in group ${g.cn}!`);
             }
             return USER_CACHE[u];
         }).filter(o => o);
